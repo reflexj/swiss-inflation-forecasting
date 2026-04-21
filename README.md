@@ -1,12 +1,28 @@
 # Swiss Inflation Forecast
 
-An OLS model that forecasts Swiss CPI inflation (YoY) one month ahead using macroeconomic indicators. Built to be easily extensible — adding a new variable requires only editing `config.yaml`.
+An OLS model that forecasts Swiss CPI inflation (YoY) one month ahead using macroeconomic indicators. To add another variable you only need to edit `config.yaml`.
 
 ## Results
 
 **Latest forecast: April 2026 → +0.16%** (95% CI: -0.38% to +0.69%)
 
 ![Forecast vs Actual](results/figures/forecast_vs_actual.png)
+
+## Benchmark Comparison
+ 
+The OLS model is compared against a naive benchmark (this month's inflation = last month's inflation).
+ 
+![Benchmark Comparison](results/figures/benchmark_comparison.png)
+ 
+| Metric | OLS | Naive |
+|--------|-----|-------|
+| MAE | 0.1648 | 0.1725 |
+| RMSE | 0.2056 | 0.2177 |
+| Theil's U2 | **0.944** | 1.000 |
+ 
+The model reduces RMSE by **5.6%** over the naive forecast.
+
+## Residuals
 
 ![Residuals over time](results/figures/residuals.png)
 
@@ -18,6 +34,8 @@ An OLS model that forecasts Swiss CPI inflation (YoY) one month ahead using macr
 | MAE (out-of-sample) | see evaluation_metrics.csv |
 | Train period | 1999–2022 |
 | Test period | 2023–2026 |
+
+Because the EUR/CHF exachge rate did't exist before 1999 this is the natural starting point of the training period.
 
 ## Model
 
@@ -41,31 +59,14 @@ Heteroskedasticity-robust standard errors (HC3).
 | EUR/CHF exchange rate | [SNB](https://data.snb.ch) | `data/raw/eurchf_snb_raw.csv` |
 | Brent crude oil (EUR) | [FRED](https://fred.stlouisfed.org) | fetched via API |
 
+
 ## Setup
 
-```bash
-git clone https://github.com/YOUR_USERNAME/swiss-inflation-forecast.git
-cd swiss-inflation-forecast
-python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env            # add your FRED API key
-```
-
 Manually place the following files in `data/raw/`:
-- `cpi_bfs_raw.xlsx` — downloaded from BFS
-- `eurchf_snb_raw.csv` — downloaded from SNB data portal
+- `cpi_bfs_raw.xlsx`  downloaded from BFS
+- `eurchf_snb_raw.csv`  downloaded from SNB data portal
 
-## Usage
 
-```bash
-# Full pipeline
-python src/fetch_data.py       # load/download raw data
-python src/preprocess.py       # merge, build features, stationarity check
-python src/model.py            # fit OLS, save coefficients
-python src/evaluate.py         # metrics and plots
-python src/forecast.py         # forecast next month
-```
 
 ## Adding a New Variable
 
@@ -80,5 +81,3 @@ features:
     transform: "diff"
     description: "SNB policy rate, first difference"
 ```
-
-No other code changes needed.
