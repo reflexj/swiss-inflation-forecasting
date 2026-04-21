@@ -1,45 +1,70 @@
 # Swiss Inflation Forecast
 
-An extensible OLS model for forecasting Swiss CPI inflation using macroeconomic indicators.
+An OLS model that forecasts Swiss CPI inflation (YoY) one month ahead using macroeconomic indicators. Built to be easily extensible — adding a new variable requires only editing `config.yaml`.
 
-## Methodology
+## Results
 
-The model follows a reduced-form **Phillips Curve** approach:
+**Latest forecast: April 2026 → +0.16%** (95% CI: -0.38% to +0.69%)
 
-$$\pi_t = \alpha + \beta_1 \pi_{t-1} + \beta_2 \Delta e_t + \beta_3 \Delta p_{\text{oil},t} + \varepsilon_t$$
+![Forecast vs Actual](results/figures/forecast_vs_actual.png)
 
-Where:
-- $\pi_t$ = Swiss CPI inflation (YoY, from BFS)
-- $\pi_{t-1}$ = Lagged inflation (autoregressive term)
-- $\Delta e_t$ = Change in EUR/CHF exchange rate
-- $\Delta p_{\text{oil},t}$ = Log-change in Brent crude oil price
+![Residuals over time](results/figures/residuals.png)
+
+![Residuals distribution](results/figures/residuals_hist.png)
+
+| Metric | Value |
+|--------|-------|
+| R² (in-sample) | 0.922 |
+| MAE (out-of-sample) | see evaluation_metrics.csv |
+| Train period | 1999–2022 |
+| Test period | 2023–2026 |
+
+## Model
+
+Reduced-form Phillips Curve estimated with OLS:
+
+$$\pi_t = \alpha + \beta_1 \pi_{t-1} + \beta_2 \Delta e_t + \beta_3 \Delta \ln p_{\text{oil},t} + \varepsilon_t$$
+
+| Variable | Coef | p-value |
+|----------|------|---------|
+| CPI (lag 1) | 0.966 | 0.000 |
+| EUR/CHF change (lag 1) | 1.146 | 0.430 |
+| Oil price log-diff (lag 2) | 0.378 | 0.021 |
+
+Heteroskedasticity-robust standard errors (HC3).
 
 ## Data Sources
 
-| Variable | Source | Frequency |
-|---|---|---|
-| CPI (LIK) | [BFS](https://www.bfs.admin.ch) | Monthly |
-| EUR/CHF | [SNB Data Portal](https://data.snb.ch) | Monthly |
-| Brent Oil | [FRED](https://fred.stlouisfed.org) | Monthly |
+| Variable | Source | File |
+|----------|--------|------|
+| Swiss CPI (LIK) | [BFS](https://www.bfs.admin.ch) | `data/raw/cpi_bfs_raw.xlsx` |
+| EUR/CHF exchange rate | [SNB](https://data.snb.ch) | `data/raw/eurchf_snb_raw.csv` |
+| Brent crude oil (EUR) | [FRED](https://fred.stlouisfed.org) | fetched via API |
 
-## Project Structure
+## Setup
 
+```bash
+git clone https://github.com/YOUR_USERNAME/swiss-inflation-forecast.git
+cd swiss-inflation-forecast
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env            # add your FRED API key
 ```
-swiss-inflation-forecast/
-├── data/
-│   ├── raw/              # Raw downloaded data (not tracked in git)
-│   └── processed/        # Merged, cleaned dataset
-├── src/
-│   ├── fetch_data.py     # Data download from BFS, SNB, FRED
-│   ├── preprocess.py     # Cleaning, merging, feature engineering
-│   ├── model.py          # OLS estimation
-│   └── evaluate.py       # Metrics and plots
-├── notebooks/
-│   └── exploration.ipynb # EDA
-├── results/figures/      # Output charts
-├── config.yaml           # Add new variables here
-├── .env.example          # API key template
-└── requirements.txt
+
+Manually place the following files in `data/raw/`:
+- `cpi_bfs_raw.xlsx` — downloaded from BFS
+- `eurchf_snb_raw.csv` — downloaded from SNB data portal
+
+## Usage
+
+```bash
+# Full pipeline
+python src/fetch_data.py       # load/download raw data
+python src/preprocess.py       # merge, build features, stationarity check
+python src/model.py            # fit OLS, save coefficients
+python src/evaluate.py         # metrics and plots
+python src/forecast.py         # forecast next month
 ```
 
 ## Adding a New Variable
@@ -48,41 +73,12 @@ Open `config.yaml` and add an entry under `features`:
 
 ```yaml
 features:
-  - name: "my_new_variable"
-    source: "fred"           # "fred", "snb", "bfs", or "derived"
-    series_id: "SERIES_ID"   # API series identifier
-    lag: 1                   # How many months to lag
-    transform: "diff"        # "none", "diff", "log_diff"
-    description: "..."
+  - name: "snb_rate"
+    source: "snb"
+    series_id: "SNBPRATE"
+    lag: 1
+    transform: "diff"
+    description: "SNB policy rate, first difference"
 ```
 
 No other code changes needed.
-
-## Setup
-
-```bash
-# 1. Clone and install
-git clone https://github.com/YOUR_USERNAME/swiss-inflation-forecast.git
-cd swiss-inflation-forecast
-pip install -r requirements.txt
-
-# 2. Set up API key
-cp .env.example .env
-# Edit .env and add your FRED API key
-
-# 3. Run pipeline
-python src/fetch_data.py
-python src/preprocess.py
-python src/model.py
-python src/evaluate.py
-```
-
-## Results
-
-*To be filled in after model estimation.*
-
-## References
-
-- Canetg, F. (2025). *Monetary Policy in a New Era*. University of Bern.
-- Wooldridge, J. (2020). *Introductory Econometrics*. 7th ed.
-- SNB (2024). *Monetary Policy Report*.
