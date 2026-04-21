@@ -1,0 +1,33 @@
+# Environment
+.env
+*.env
+venv/
+
+# Data (raw files not tracked, processed can be)
+data/raw/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+env/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Results (optional: comment out if you want to track figures)
+results/

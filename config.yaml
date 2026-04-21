@@ -1,0 +1,30 @@
+target:
+  name: "CPI_YoY"
+  source: "bfs"
+  transform: "none"
+
+features:
+  - name: "CPI_lag1"
+    source: "derived"
+    lag: 1
+    transform: "none"
+    description: "Lagged CPI YoY (autoregressive term)"
+
+  - name: "EUR_CHF"
+    source: "snb"
+    series_id: "EURCHF"
+    lag: 1
+    transform: "diff"
+    description: "EUR/CHF exchange rate, first difference"
+
+  - name: "oil_price"
+    source: "fred"
+    series_id: "DCOILBRENTEU"
+    lag: 2
+    transform: "log_diff"
+    description: "Brent crude oil price (EUR), log difference"
+
+model:
+  train_end: "2022-12-01"
+  test_start: "2023-01-01"
+  significance_level: 0.05
