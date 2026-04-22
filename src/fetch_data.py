@@ -1,19 +1,16 @@
 """
 fetch_data.py
 -------------
-Loads CPI and EUR/CHF from locally saved files, downloads oil price from FRED.
+Loads CPI, EUR/CHF and IPI from locally saved files, downloads oil price from FRED.
 
 Data sources:
-    data/raw/cpi_bfs_raw.xlsx        <- BFS Excel download (INDEX_m sheet)
-    data/raw/eurchf_snb_raw.csv      <- SNB CSV download (devkum, EUR, monthly)
+    data/raw/cpi_bfs_raw.xlsx        <- BFS Excel (INDEX_m sheet)
+    data/raw/eurchf_snb_raw.csv      <- SNB CSV (devkum, EUR, monthly)
+    data/raw/import_price_bfs_raw.xlsx <- BFS IPI Excel (INDEX_m sheet)
     FRED API                         <- Brent oil price (DCOILBRENTEU)
 
 Run:
     python src/fetch_data.py
-
-Requires:
-    .env file with FRED_API_KEY set
-    pip install -r requirements.txt
 """
 
 import os
@@ -25,7 +22,7 @@ from dotenv import load_dotenv
 
 # Paths
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-RAW = os.path.join(ROOT, "data", "raw")
+RAW  = os.path.join(ROOT, "data", "raw")
 os.makedirs(RAW, exist_ok=True)
 
 load_dotenv(os.path.join(ROOT, ".env"))
@@ -125,9 +122,55 @@ def fetch_fred_oil(start: str = "1990-01-01") -> pd.DataFrame:
     return df
 
 
+def fetch_bfs_ipi(start: str = "1990-01-01") -> pd.DataFrame:
+    """
+    Reads the Swiss Import Price Index (IPI) from the manually downloaded BFS Excel file.
+    File:   data/raw/import_price_bfs_raw.xlsx
+    Sheet:  INDEX_m
+    Structure: Row 8 onwards, col index 2=date, col index 6=IPI base 2010=100
+    Returns DataFrame with columns: date, import_price
+    """
+    print("Reading Import Price Index from local BFS Excel file...")
+
+    xlsx_path = os.path.join(RAW, "import_price_bfs_raw.xlsx")
+    if not os.path.exists(xlsx_path):
+        raise FileNotFoundError(
+            f"IPI Excel file not found at:\n  {xlsx_path}\n"
+            "Rename your downloaded BFS IPI file to 'import_price_bfs_raw.xlsx' "
+            "and place it in data/raw/"
+        )
+
+    from openpyxl import load_workbook
+    wb = load_workbook(xlsx_path, read_only=True)
+    ws = wb["INDEX_m"]
+    rows = list(ws.iter_rows(values_only=True))
+
+    # Data starts at row 8 (index 7)
+    # col index 2 = date, col index 6 = IPI base 2010=100
+    data = []
+    for row in rows[7:]:
+        if len(row) > 6 and isinstance(row[2], datetime.datetime) and row[6] is not None:
+            try:
+                data.append({"date": row[2], "import_price": float(row[6])})
+            except (TypeError, ValueError):
+                pass
+
+    df = pd.DataFrame(data)
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.sort_values("date").reset_index(drop=True)
+    df = df[df["date"] >= start].reset_index(drop=True)
+
+    path = os.path.join(RAW, "import_price_bfs.csv")
+    df.to_csv(path, index=False)
+    print(f"  Saved {len(df)} rows -> {path}")
+    print(f"  Date range: {df['date'].min().date()} to {df['date'].max().date()}")
+    return df
+
+
 if __name__ == "__main__":
     fetch_bfs_cpi()
     fetch_snb_eurchf()
     fetch_fred_oil()
+    fetch_bfs_ipi()
     print("\nAll raw data loaded/downloaded successfully.")
     print("Next step: python src/preprocess.py")

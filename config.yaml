@@ -24,6 +24,12 @@ features:
     transform: "log_diff"
     description: "Brent crude oil price (EUR), log difference"
 
+  - name: "import_price"
+    source: "bfs_ipi"
+    lag: 1
+    transform: "log_diff"
+    description: "Swiss Import Price Index (IPI), log difference, lag 1"
+
 model:
   train_end: "2022-12-01"
   test_start: "2023-01-01"

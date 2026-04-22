@@ -35,10 +35,12 @@ def load_raw() -> pd.DataFrame:
     cpi = pd.read_csv(os.path.join(RAW, "cpi_bfs.csv"), parse_dates=["date"])
     eur = pd.read_csv(os.path.join(RAW, "eurchf_snb.csv"), parse_dates=["date"])
     oil = pd.read_csv(os.path.join(RAW, "oil_fred.csv"), parse_dates=["date"])
+    ipi = pd.read_csv(os.path.join(RAW, "import_price_bfs.csv"), parse_dates=["date"])
 
     # Merge on date (inner join = keep only months where all series exist)
     df = cpi.merge(eur, on="date", how="inner")
     df = df.merge(oil, on="date", how="inner")
+    df = df.merge(ipi, on="date", how="inner")
     df = df.sort_values("date").reset_index(drop=True)
 
     print(f"  Merged dataset: {len(df)} rows, {df['date'].min().date()} to {df['date'].max().date()}")
@@ -101,8 +103,13 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
             base = apply_transform(df[col], transform)
             result[name] = base.shift(lag)
 
+        # ── Import Price Index from BFS ──
+        elif source == "bfs_ipi":
+            base = apply_transform(df["import_price"], transform)
+            result[name] = base.shift(lag)
+
         else:
-            raise ValueError(f"Unknown source: '{source}'. Use: derived, snb, fred, bfs")
+            raise ValueError(f"Unknown source: '{source}'. Use: derived, snb, fred, bfs, bfs_ipi")
 
         print(f"  + {name:20s} (source={source}, lag={lag}, transform={transform})")
 
