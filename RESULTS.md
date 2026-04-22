@@ -1,81 +1,89 @@
 # Model Results & Comparison
 
-This document compares two model specifications against a naive benchmark.
+This document compares four model specifications against a naive benchmark.
 All out-of-sample evaluation is on the test period **January 2023 – March 2026** (39 observations).
+The naive benchmark predicts $\pi_t = \pi_{t-1}$ (this month's inflation = last month's).
 
 ---
 
 ## Model Specifications
 
-**Baseline Model (3 variables)**
+| Model | Variables | Rationale |
+|-------|-----------|-----------|
+| **A – Baseline** | CPI lag 1 + EUR/CHF + Oil | Original specification |
+| **B – Parsimonious** | CPI lag 1 + IPI | Replace oil with import prices |
+| **C – No EUR/CHF** | CPI lag 1 + Oil + IPI | Test IPI alongside oil |
+| **D – Minimal** | CPI lag 1 + Oil | Drop EUR/CHF entirely |
 
-$$\pi_t = \alpha + \beta_1 \pi_{t-1} + \beta_2 \Delta e_t + \beta_3 \Delta \ln p_{\text{oil},t} + \varepsilon_t$$
-
-**Extended Model (4 variables)**
-
-$$\pi_t = \alpha + \beta_1 \pi_{t-1} + \beta_2 \Delta e_t + \beta_3 \Delta \ln p_{\text{oil},t} + \beta_4 \Delta \ln \text{IPI}_t + \varepsilon_t$$
-
-**Naive Benchmark**
-
-$$\pi_t = \pi_{t-1}$$
+All models estimated with OLS and heteroskedasticity-robust standard errors (HC3).
+Train period: June 1999 – December 2022 (283 observations).
 
 ---
 
 ## Coefficient Estimates
 
-| Variable | Baseline | Extended | Significant? |
-|---|---|---|---|
-| Intercept | 0.027 | 0.037 | ✅ (extended only) |
-| CPI lag 1 | 0.966*** | 0.947*** | ✅ both |
-| EUR/CHF Δ (lag 1) | 1.146 | 0.420 | ❌ neither |
-| Oil price Δ log (lag 2) | 0.378** | -0.062 | ✅ baseline only |
-| Import Price Δ log (lag 1) | — | 10.809*** | ✅ extended only |
+| Variable | A | B | C | D |
+|----------|---|---|---|---|
+| Intercept | 0.027 | 0.036** | 0.037** | 0.025 |
+| CPI lag 1 | 0.966*** | 0.947*** | 0.946*** | 0.964*** |
+| EUR/CHF Δ (lag 1) | 1.146 | — | — | — |
+| Oil log-diff (lag 2) | 0.378** | — | -0.065 | 0.395** |
+| Import Price log-diff (lag 1) | — | 10.481*** | 11.014*** | — |
 
-*Heteroskedasticity-robust standard errors (HC3). \*\*\* p<0.01, \*\* p<0.05*
+*\*\*\* p<0.01, \*\* p<0.05. HC3 robust standard errors.*
 
-**Notable finding:** Adding the Import Price Index (IPI) renders the oil price coefficient insignificant (p=0.72). This suggests the two variables capture overlapping information — import prices already absorb energy price movements, making the oil price redundant once the IPI is included.
+**Key observations:**
+- Once the IPI enters (Models B, C), oil becomes insignificant (p=0.71 in C) — consistent with moderate collinearity between the two (r=0.589).
+- EUR/CHF is never individually significant, but its removal worsens out-of-sample performance (A vs D).
+- The IPI is strongly significant in-sample but does not improve out-of-sample accuracy.
 
 ---
 
 ## In-Sample Fit (Training Period 1999–2022)
 
-| Metric | Baseline | Extended |
-|---|---|---|
-| R² | 0.9223 | 0.9264 |
-| Adj. R² | 0.9214 | 0.9254 |
-| F-statistic | 1216.81 | 916.59 |
-| Observations | 283 | 283 |
+| Metric | A | B | C | D |
+|--------|---|---|---|---|
+| R² | 0.9223 | **0.9264** | **0.9264** | 0.9219 |
+| Adj. R² | 0.9214 | **0.9258** | 0.9256 | 0.9213 |
+| F-statistic | 1216.8 | **1812.5** | 1198.3 | 1714.3 |
 
-The extended model improves R² marginally (+0.004). However, the F-statistic drops as adding a variable without sufficient improvement penalises the overall fit.
+Models B and C achieve higher R² in-sample due to the IPI's strong explanatory power. Model B has the highest F-statistic, reflecting the most efficient use of degrees of freedom.
 
 ---
 
 ## Out-of-Sample Performance (Test Period 2023–2026)
 
-| Metric | Baseline | Extended | Naive Benchmark |
-|---|---|---|---|
-| MAE (pp) | 0.1648 | **0.1615** | 0.1725 |
-| RMSE (pp) | **0.2056** | 0.2114 | 0.2177 |
-| Theil's U2 | **0.944** | 0.971 | 1.000 |
-| Beats naive by | **5.6%** | 2.9% | — |
+| Metric | A | B | C | D | Naive |
+|--------|---|---|---|---|-------|
+| RMSE (pp) | **0.2056** | 0.2119 | 0.2126 | 0.2084 | 0.2177 |
+| MAE (pp) | 0.1648 | **0.1615** | **0.1618** | 0.1663 | 0.1725 |
+| Theil's U2 | **0.9444** | 0.9730 | 0.9765 | 0.9569 | 1.000 |
+| Beats naive by | **5.6%** | 2.7% | 2.3% | 4.3% | — |
 
-Both models outperform the naive benchmark. However, the **baseline model performs better out-of-sample** despite the extended model's superior in-sample fit. This is a classic bias-variance tradeoff: the IPI adds explanatory power in-sample but reduces generalisability out-of-sample.
+All four models outperform the naive benchmark. **Model A achieves the best RMSE and Theil's U2**, despite EUR/CHF being individually insignificant. This illustrates a key principle: statistical significance in-sample does not equal out-of-sample relevance.
+
+The IPI improves in-sample fit (higher R²) but reduces out-of-sample accuracy — a textbook bias-variance tradeoff. The IPI likely overfits to historical patterns that do not persist in the test period.
 
 ---
 
 ## Latest Forecast: April 2026
 
 | Model | Forecast | 95% CI |
-|---|---|---|
-| Baseline | +0.155% | [-0.381%, +0.691%] |
-| Extended | +0.168% | [-0.355%, +0.692%] |
+|-------|----------|--------|
+| A – Baseline | **+0.155%** | [-0.381%, +0.691%] |
 
-Both models predict Swiss CPI YoY inflation close to zero for April 2026, well within the SNB's 0–2% target band. The small difference between models (0.013 pp) reflects the minor role of the IPI in a low-inflation environment.
+The preferred model (A) forecasts Swiss CPI YoY inflation at +0.155% for April 2026, well within the SNB's 0–2% target band.
 
 ---
 
 ## Conclusion
 
-The baseline 3-variable model is preferred for forecasting based on out-of-sample performance. The IPI is statistically significant in-sample and economically meaningful — it captures import price pressures before they feed into consumer prices — but its inclusion does not improve out-of-sample accuracy over the test period.
+**Model A (CPI lag 1 + EUR/CHF + Oil) is the preferred specification** based on out-of-sample RMSE and Theil's U2.
 
-A natural next step would be to test the IPI's contribution specifically during volatile periods (e.g. 2022–2023) using a **Diebold-Mariano test** or a **regime-dependent model** that activates the IPI only when inflation volatility exceeds a threshold.
+Key findings:
+- EUR/CHF, although statistically insignificant, contributes to forecast accuracy (A beats D by 1.3pp in Theil's U2)
+- The IPI captures import price dynamics but introduces overfitting over the 2023–2026 test period
+- Oil and IPI carry overlapping information (r=0.589); including both renders oil redundant
+- All models beat the naive benchmark, validating the OLS approach over a simple AR(1)
+
+A natural extension would be a **regime-dependent model** that activates the IPI only during high-inflation periods, or a **Diebold-Mariano test** to formally assess whether the differences between models are statistically significant.

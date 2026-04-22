@@ -1,0 +1,23 @@
+# Model B configuration
+target:
+  name: "CPI_YoY"
+  source: "bfs"
+  transform: "none"
+
+features:
+  - name: "CPI_lag1"
+    source: "derived"
+    lag: 1
+    transform: "none"
+    description: "Lagged CPI YoY (autoregressive term)"
+
+  - name: "import_price"
+    source: "bfs_ipi"
+    lag: 1
+    transform: "log_diff"
+    description: "Swiss Import Price Index, log difference lag 1"
+
+model:
+  train_end: "2022-12-01"
+  test_start: "2023-01-01"
+  significance_level: 0.05
