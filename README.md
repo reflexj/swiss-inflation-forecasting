@@ -1,6 +1,6 @@
 # Swiss Inflation Forecast
 
-An OLS model that forecasts Swiss CPI inflation (YoY) one month ahead using macroeconomic indicators. Built to be easily extensible — adding a new variable requires only editing `config.yaml`.
+An OLS model that forecasts Swiss CPI inflation (YoY) one month ahead using macroeconomic indicators. Built to be easily extensible, adding a new variable requires only editing `config.yaml`.
 
 ## Latest Forecast
 
@@ -32,7 +32,7 @@ $$\pi_t = \alpha + \beta_1 \pi_{t-1} + \beta_2 \Delta e_t + \beta_3 \Delta \ln p
 | EUR/CHF change (lag 1) | 1.146 | 0.430 |
 | Oil price log-diff (lag 2) | 0.378 | 0.021 |
 
-Heteroskedasticity-robust standard errors (HC3). Although EUR/CHF is not individually significant at the 5% level, model comparison shows it improves out-of-sample accuracy — dropping it worsens Theil's U2 from 0.944 to 0.957.
+Heteroskedasticity-robust standard errors (HC3). Although EUR/CHF is not individually significant at the 5% level, model comparison shows it improves out-of-sample accuracy. Dropping it worsens Theil's U2 from 0.944 to 0.957.
 
 ## Benchmark Comparison
 
@@ -102,4 +102,4 @@ features:
     description: "SNB policy rate, first difference"
 ```
 
-No other code changes needed.
+No other code changes needed

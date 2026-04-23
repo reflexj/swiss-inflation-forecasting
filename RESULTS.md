@@ -86,4 +86,4 @@ Key findings:
 - Oil and IPI carry overlapping information (r=0.589); including both renders oil redundant
 - All models beat the naive benchmark, validating the OLS approach over a simple AR(1)
 
-A natural extension would be a **regime-dependent model** that activates the IPI only during high-inflation periods, or a **Diebold-Mariano test** to formally assess whether the differences between models are statistically significant.
+A natural extension would be a **regime-dependent model** that activates the IPI only during high-inflation periods.
