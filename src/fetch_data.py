@@ -1,13 +1,15 @@
 """
 fetch_data.py
 -------------
-Loads CPI, EUR/CHF and IPI from locally saved files, downloads oil price from FRED.
+Loads CPI, EUR/CHF, USD/CHF and IPI from locally saved files,
+downloads oil price from FRED and converts it from USD to CHF.
 
 Data sources:
     data/raw/cpi_bfs_raw.xlsx        <- BFS Excel (INDEX_m sheet)
     data/raw/eurchf_snb_raw.csv      <- SNB CSV (devkum, EUR, monthly)
+    data/raw/usdchf_snb_raw.csv      <- SNB CSV (devkum, USD, monthly)
     data/raw/import_price_bfs_raw.xlsx <- BFS IPI Excel (INDEX_m sheet)
-    FRED API                         <- Brent oil price (DCOILBRENTEU)
+    FRED API                         <- Brent oil price (DCOILBRENTEU, USD/barrel)
 
 Run:
     python src/fetch_data.py
@@ -93,14 +95,48 @@ def fetch_snb_eurchf(start: str = "1999-01-01") -> pd.DataFrame:
     return df
 
 
+def fetch_snb_usdchf(start: str = "1990-01-01") -> pd.DataFrame:
+    """
+    Reads USD/CHF from the manually downloaded SNB CSV file.
+    File:   data/raw/usdchf_snb_raw.csv
+    Format: semicolon-separated, 3 header rows, columns: Date;D0;D1;Value
+    Source: SNB data portal, 'devkum' table (monthly average), USD.
+    Used to convert FRED Brent oil price (USD/barrel) into CHF/barrel.
+    Returns DataFrame with columns: date, USD_CHF
+    """
+    print("Reading USD/CHF from local SNB CSV file...")
+
+    csv_path = os.path.join(RAW, "usdchf_snb_raw.csv")
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(
+            f"SNB CSV file not found at:\n  {csv_path}\n"
+            "Download USD/CHF monthly averages from the SNB data portal "
+            "(https://data.snb.ch -> devkum, filter currency = USD), "
+            "rename the file to 'usdchf_snb_raw.csv' and place it in data/raw/"
+        )
+
+    df = pd.read_csv(csv_path, sep=";", skiprows=3, encoding="utf-8-sig")
+    df = df.rename(columns={"Date": "date", "Value": "USD_CHF"})
+    df["date"] = pd.to_datetime(df["date"] + "-01")
+    df = df[["date", "USD_CHF"]].sort_values("date").reset_index(drop=True)
+    df = df[df["date"] >= start].reset_index(drop=True)
+
+    path = os.path.join(RAW, "usdchf_snb.csv")
+    df.to_csv(path, index=False)
+    print(f"  Saved {len(df)} rows -> {path}")
+    print(f"  Date range: {df['date'].min().date()} to {df['date'].max().date()}")
+    return df
+
+
 def fetch_fred_oil(start: str = "1990-01-01") -> pd.DataFrame:
     """
-    Downloads Brent crude oil price in EUR from FRED.
-    Series: DCOILBRENTEU (daily) -> resampled to monthly average.
-    Requires FRED_API_KEY in .env
-    Returns DataFrame with columns: date, oil_price
+    Downloads Brent crude oil price from FRED and converts it to CHF.
+    Series: DCOILBRENTEU (daily, USD/barrel) -> resampled to monthly average
+            -> multiplied by SNB monthly USD/CHF -> CHF/barrel.
+    Requires FRED_API_KEY in .env and data/raw/usdchf_snb_raw.csv.
+    Returns DataFrame with columns: date, oil_price  (CHF per barrel)
     """
-    print("Fetching Brent Oil from FRED...")
+    print("Fetching Brent Oil from FRED (USD) and converting to CHF...")
 
     api_key = os.getenv("FRED_API_KEY")
     if not api_key:
@@ -112,8 +148,23 @@ def fetch_fred_oil(start: str = "1990-01-01") -> pd.DataFrame:
     raw = fred.get_series("DCOILBRENTEU", observation_start=start)
 
     df = raw.resample("MS").mean().reset_index()
-    df.columns = ["date", "oil_price"]
+    df.columns = ["date", "oil_price_usd"]
     df["date"] = pd.to_datetime(df["date"])
+
+    # Load USD/CHF (already monthly, MS-aligned by fetch_snb_usdchf)
+    usdchf_path = os.path.join(RAW, "usdchf_snb.csv")
+    if not os.path.exists(usdchf_path):
+        raise FileNotFoundError(
+            f"USD/CHF CSV not found at:\n  {usdchf_path}\n"
+            "Run fetch_snb_usdchf() first (it is called automatically in __main__)."
+        )
+    usdchf = pd.read_csv(usdchf_path, parse_dates=["date"])
+
+    # Inner-merge on date: both series are monthly-start; any month without
+    # a matching FX observation is dropped (consistent with preprocess.py).
+    df = df.merge(usdchf, on="date", how="inner")
+    df["oil_price"] = df["oil_price_usd"] * df["USD_CHF"]
+    df = df[["date", "oil_price"]].sort_values("date").reset_index(drop=True)
 
     path = os.path.join(RAW, "oil_fred.csv")
     df.to_csv(path, index=False)
@@ -170,6 +221,7 @@ def fetch_bfs_ipi(start: str = "1990-01-01") -> pd.DataFrame:
 if __name__ == "__main__":
     fetch_bfs_cpi()
     fetch_snb_eurchf()
+    fetch_snb_usdchf()   # must run before fetch_fred_oil (used for USD->CHF conversion)
     fetch_fred_oil()
     fetch_bfs_ipi()
     print("\nAll raw data loaded/downloaded successfully.")

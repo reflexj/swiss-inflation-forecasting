@@ -16,7 +16,7 @@ features:
     series_id: "DCOILBRENTEU"
     lag: 2
     transform: "log_diff"
-    description: "Brent crude oil price (EUR), log difference"
+    description: "Brent crude oil price (CHF, USD price converted via SNB USD/CHF), log difference"
 
   - name: "import_price"
     source: "bfs_ipi"
