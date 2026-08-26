@@ -65,7 +65,7 @@ No systematic bias in the residuals.
 ## Setup
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/swiss-inflation-forecast.git
+git clone https://github.com/reflexj/swiss-inflation-forecast.git
 cd swiss-inflation-forecast
 python -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
